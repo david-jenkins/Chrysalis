@@ -38,7 +38,10 @@ export const languageMaps = {
 
   const resources = files.map(file => {
     const langCode = path.basename(file, '.json');
-    return `  "${langCode}": {
+    // Match prettier's "as-needed" quote-props style: only quote keys that
+    // aren't valid identifiers (e.g. "nb-NO").
+    const key = /^[A-Za-z_$][\w$]*$/.test(langCode) ? langCode : `"${langCode}"`;
+    return `  ${key}: {
     messages: ${langCode.replace('-', '_')},
   },`;
   }).join('\n');
@@ -52,23 +55,21 @@ const resources = {
 ${resources}
 };
 
-i18n
-  .use(initReactI18next)
-  .init({
-    react: {
-      useSuspense: true,
-    },
-    resources: resources,
-    lng: "en",
-    keySeparator: ".",
-    ns: ["messages"],
-    returnEmptyString: true,
-    defaultNS: "messages",
-    fallbackLng: "en",
-    interpolation: {
-      escapeValue: false,
-    },
-  });
+i18n.use(initReactI18next).init({
+  react: {
+    useSuspense: true,
+  },
+  resources: resources,
+  lng: "en",
+  keySeparator: ".",
+  ns: ["messages"],
+  returnEmptyString: true,
+  defaultNS: "messages",
+  fallbackLng: "en",
+  interpolation: {
+    escapeValue: false,
+  },
+});
 
 i18n.refreshHardware = (device) => {
   Object.keys(i18n.options.resources).forEach((code) => {
