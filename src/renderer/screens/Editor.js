@@ -53,7 +53,7 @@ const Editor = (props) => {
 
   const [keymap, setKeymap] = useState({ custom: [], default: [], onlyCustom: false });
 
-  const [copiedLayer, setCopiedLayer] = useState({ keymap: [], colorMap: [] });
+  const [copiedLayer, setCopiedLayer] = useState({ keymap: [], colorMap: null });
 
   const [layerNames, setLayerNames] = useState({ storageSize: 0, names: [] });
 
@@ -366,25 +366,33 @@ const Editor = (props) => {
   const copyLayer = (index) => {
     setCopiedLayer({
       keymap: keymap.custom[index].slice(0),
-      colorMap: colormap?.colorMap[index]?.slice(0) || [],
+      // Not every keymap layer has a matching colormap layer (or the device
+      // may have no LEDs at all). Use null to mean "no colors were copied".
+      colorMap: colormap?.colorMap?.[index]?.slice(0) ?? null,
     });
   };
 
   const pasteLayer = (targetLayer) => {
     if (!hasCopiedLayer()) return;
 
-    const newKeymap = { ...keymap };
-    newKeymap.custom[targetLayer] = copiedLayer.keymap;
+    const newCustom = keymap.custom.slice(0);
+    newCustom[targetLayer] = copiedLayer.keymap.slice(0);
+    setKeymap({ ...keymap, custom: newCustom });
 
-    const newColormap = { ...colormap };
-    newColormap.colorMap[targetLayer] = copiedLayer.colorMap;
-
-    setKeymap(newKeymap);
-    setColormap(newColormap);
+    // Only paste colors when we have some, and the target layer has a
+    // colormap layer to receive them. Writing an empty array (or past the
+    // end of the colormap) leaves holes that crash rendering and shift the
+    // colors of later layers when saved to the device.
+    const targetHasColors = targetLayer < (colormap?.colorMap?.length ?? 0);
+    if (copiedLayer.colorMap && targetHasColors) {
+      const newColorMap = colormap.colorMap.slice(0);
+      newColorMap[targetLayer] = copiedLayer.colorMap.slice(0);
+      setColormap({ ...colormap, colorMap: newColorMap });
+    }
 
     setCopiedLayer({
       keymap: [],
-      colorMap: [],
+      colorMap: null,
     });
 
     setModified(true);
